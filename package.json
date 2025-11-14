@@ -28,10 +28,6 @@
       "gatekeeperAssess": false,
       "entitlements": "entitlements.mac.plist",
       "entitlementsInherit": "entitlements.mac.plist",
-      "arch": [
-        "x64",
-        "arm64"
-      ]
     },
     "dmg": {
       "contents": [
