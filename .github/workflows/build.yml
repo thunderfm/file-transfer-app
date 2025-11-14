@@ -34,7 +34,7 @@ jobs:
           GH_TOKEN: ""
 
       - name: Upload DMG artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: SMB-File-Transfer.dmg
           path: dist/*.dmg
