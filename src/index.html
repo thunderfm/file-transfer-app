@@ -203,6 +203,13 @@
       transition: width 0.3s;
     }
 
+    .progress-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+
     .progress-text {
       text-align: center;
       color: #64748b;
@@ -311,11 +318,23 @@
       <div id="statusMessage" class="status-message"></div>
 
       <div id="progressContainer" class="progress-container">
-        <div class="progress-text"><span id="progressPercent">0</span>%</div>
-        <div class="progress-bar">
-          <div id="progressFill" class="progress-fill"></div>
+        <div>
+          <div class="progress-label">Current File</div>
+          <div class="progress-text"><span id="fileProgressPercent">0</span>%</div>
+          <div class="progress-bar">
+            <div id="fileProgressFill" class="progress-fill"></div>
+          </div>
+          <p class="current-file" id="currentFile"></p>
         </div>
-        <p class="current-file" id="currentFile"></p>
+
+        <div style="margin-top: 16px;">
+          <div class="progress-label">Overall Progress</div>
+          <div class="progress-text"><span id="overallProgressPercent">0</span>%</div>
+          <div class="progress-bar">
+            <div id="overallProgressFill" class="progress-fill"></div>
+          </div>
+          <p class="current-file" id="transferStats"></p>
+        </div>
       </div>
 
       <div class="info-box">
@@ -332,9 +351,12 @@
     const transferBtn = document.getElementById('transferBtn');
     const clearBtn = document.getElementById('clearBtn');
     const progressContainer = document.getElementById('progressContainer');
-    const progressFill = document.getElementById('progressFill');
-    const progressPercent = document.getElementById('progressPercent');
+    const fileProgressFill = document.getElementById('fileProgressFill');
+    const fileProgressPercent = document.getElementById('fileProgressPercent');
+    const overallProgressFill = document.getElementById('overallProgressFill');
+    const overallProgressPercent = document.getElementById('overallProgressPercent');
     const currentFile = document.getElementById('currentFile');
+    const transferStats = document.getElementById('transferStats');
     const statusMessage = document.getElementById('statusMessage');
 
     let source = null;
@@ -423,12 +445,19 @@
     });
 
     window.api.onTransferProgress((data) => {
-      if (data.progress) {
-        progressFill.style.width = `${data.progress}%`;
-        progressPercent.textContent = data.progress;
+      if (data.fileProgress !== undefined) {
+        fileProgressFill.style.width = `${data.fileProgress}%`;
+        fileProgressPercent.textContent = data.fileProgress;
+      }
+      if (data.overallProgress !== undefined) {
+        overallProgressFill.style.width = `${data.overallProgress}%`;
+        overallProgressPercent.textContent = data.overallProgress;
       }
       if (data.currentFile) {
         currentFile.textContent = data.currentFile;
+      }
+      if (data.stats) {
+        transferStats.textContent = data.stats;
       }
     });
 

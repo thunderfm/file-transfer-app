@@ -1,15 +1,14 @@
 // main.js - Electron main process
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
-const { exec } = require('child_process');
-const os = require('os');
+const { spawn } = require('child_process');
 
 let mainWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 600,
-    height: 750,
+    width: 700,
+    height: 850,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -18,7 +17,6 @@ function createWindow() {
   });
 
   mainWindow.loadFile('src/index.html');
-  mainWindow.webContents.openDevTools();
 }
 
 app.on('ready', createWindow);
@@ -35,7 +33,7 @@ app.on('activate', () => {
   }
 });
 
-// Handle rsync transfer
+// Handle rsync transfer with improved progress tracking
 ipcMain.handle('start-transfer', async (event, { sourcePaths, destination }) => {
   return new Promise((resolve, reject) => {
     if (!destination || !sourcePaths || sourcePaths.length === 0) {
@@ -43,51 +41,69 @@ ipcMain.handle('start-transfer', async (event, { sourcePaths, destination }) => 
       return;
     }
 
-    // Escape paths for shell
     const sources = sourcePaths.map(p => `"${p}"`).join(' ');
     const dest = `"${destination}"`;
     const command = `rsync -av --progress ${sources} ${dest}/`;
 
-    let output = '';
-    let totalLines = 0;
+    let totalBytes = 0;
+    let transferredBytes = 0;
+    let fileCount = 0;
+    let filesProcessed = 0;
 
-    const child = exec(command, (error, stdout, stderr) => {
-      if (error) {
-        reject(`Transfer failed: ${error.message}`);
-        return;
-      }
-      resolve({ success: true, output: stdout });
+    const child = spawn('bash', ['-c', command], {
+      stdio: ['ignore', 'pipe', 'pipe']
     });
 
     child.stdout.on('data', (data) => {
-      output += data.toString();
       const lines = data.toString().split('\n');
-      totalLines += lines.filter(l => l.includes('%')).length;
       
       lines.forEach(line => {
-        // Parse rsync progress lines
-        if (line.includes('%')) {
-          try {
-            const match = line.match(/(\d+)%/);
-            if (match) {
-              const progress = parseInt(match[1]);
-              event.sender.send('transfer-progress', { 
-                progress, 
-                currentFile: line.split(' ').slice(0, 3).join(' ')
-              });
-            }
-          } catch (e) {
-            // Parsing error, skip
+        // Parse rsync progress lines like: "12345 100%   1.23MB/s    0:00:05 (xfr#1, ir-chk=1000/2000)"
+        const progressMatch = line.match(/(\d+)\s+(\d+)%\s+([\d.]+[KMG]B\/s)/);
+        if (progressMatch) {
+          const bytes = parseInt(progressMatch[1]);
+          const percent = parseInt(progressMatch[2]);
+          const filename = line.split(/\s+/)[0];
+          
+          transferredBytes += bytes;
+          
+          // Extract file info
+          const fileMatch = line.match(/xfr#(\d+),\s*ir-chk=(\d+)\/(\d+)/);
+          if (fileMatch) {
+            filesProcessed = parseInt(fileMatch[1]);
+            fileCount = parseInt(fileMatch[3]);
           }
+
+          const overallPercent = fileCount > 0 
+            ? Math.round((filesProcessed / fileCount) * 100)
+            : 0;
+
+          event.sender.send('transfer-progress', {
+            fileProgress: percent,
+            overallProgress: overallPercent,
+            currentFile: filename,
+            stats: `File ${filesProcessed}/${fileCount}`
+          });
         }
       });
     });
 
     child.stderr.on('data', (data) => {
-      event.sender.send('transfer-progress', { 
-        status: 'info', 
-        message: data.toString() 
-      });
+      const output = data.toString();
+      // rsync sends stats to stderr
+      console.log('rsync:', output);
+    });
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve({ success: true });
+      } else {
+        reject(`Transfer failed with exit code ${code}`);
+      }
+    });
+
+    child.on('error', (error) => {
+      reject(`Transfer failed: ${error.message}`);
     });
   });
 });
