@@ -8,7 +8,7 @@
   "start": "electron .",
   "build": "electron-builder",
   "build-mac": "electron-builder --mac",
-  "build-dmg": "electron-builder --mac dmg -m x64 arm64"
+  "build-dmg": "electron-builder --mac --universal"
   },
   "devDependencies": {
     "electron": "^27.0.0",
