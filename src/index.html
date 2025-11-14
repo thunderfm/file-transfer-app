@@ -312,6 +312,7 @@
 
       <div class="button-group">
         <button id="transferBtn" class="btn-transfer" disabled>Start Transfer</button>
+        <button id="cancelBtn" class="btn-transfer" style="background-color: #ef4444; display: none;">Cancel Transfer</button>
         <button id="clearBtn" class="btn-clear">Clear</button>
       </div>
 
@@ -349,6 +350,7 @@
     const sourcePath = document.getElementById('sourcePath');
     const destPath = document.getElementById('destPath');
     const transferBtn = document.getElementById('transferBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
     const clearBtn = document.getElementById('clearBtn');
     const progressContainer = document.getElementById('progressContainer');
     const fileProgressFill = document.getElementById('fileProgressFill');
@@ -361,6 +363,7 @@
 
     let source = null;
     let dest = null;
+    let transferInProgress = false;
 
     // Setup source zone
     setupDropZone(sourceZone, sourcePath, (path) => {
@@ -427,21 +430,34 @@
     transferBtn.addEventListener('click', async () => {
       if (!source || !dest) return;
 
+      transferInProgress = true;
       progressContainer.classList.add('active');
       statusMessage.classList.remove('active');
-      transferBtn.disabled = true;
+      transferBtn.style.display = 'none';
+      cancelBtn.style.display = 'block';
       clearBtn.disabled = true;
 
       try {
         await window.api.startTransfer([source], dest);
         showSuccess('Transfer complete!');
       } catch (error) {
-        showError(error);
+        if (error.includes('cancelled')) {
+          showError('Transfer cancelled');
+        } else {
+          showError(error);
+        }
       } finally {
-        transferBtn.disabled = false;
+        transferInProgress = false;
+        transferBtn.style.display = 'block';
+        cancelBtn.style.display = 'none';
         clearBtn.disabled = false;
         progressContainer.classList.remove('active');
       }
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      window.api.cancelTransfer();
+      transferInProgress = false;
     });
 
     window.api.onTransferProgress((data) => {

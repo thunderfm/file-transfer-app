@@ -4,6 +4,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 let mainWindow;
+let rsyncProcess = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -45,16 +46,14 @@ ipcMain.handle('start-transfer', async (event, { sourcePaths, destination }) => 
     const dest = `"${destination}"`;
     const command = `rsync -av --progress ${sources} ${dest}/`;
 
-    let totalBytes = 0;
-    let transferredBytes = 0;
-    let fileCount = 0;
     let filesProcessed = 0;
+    let fileCount = 0;
 
-    const child = spawn('bash', ['-c', command], {
+    rsyncProcess = spawn('bash', ['-c', command], {
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
-    child.stdout.on('data', (data) => {
+    rsyncProcess.stdout.on('data', (data) => {
       const lines = data.toString().split('\n');
       
       lines.forEach(line => {
@@ -64,8 +63,6 @@ ipcMain.handle('start-transfer', async (event, { sourcePaths, destination }) => 
           const bytes = parseInt(progressMatch[1]);
           const percent = parseInt(progressMatch[2]);
           const filename = line.split(/\s+/)[0];
-          
-          transferredBytes += bytes;
           
           // Extract file info
           const fileMatch = line.match(/xfr#(\d+),\s*ir-chk=(\d+)\/(\d+)/);
@@ -88,24 +85,36 @@ ipcMain.handle('start-transfer', async (event, { sourcePaths, destination }) => 
       });
     });
 
-    child.stderr.on('data', (data) => {
+    rsyncProcess.stderr.on('data', (data) => {
       const output = data.toString();
-      // rsync sends stats to stderr
       console.log('rsync:', output);
     });
 
-    child.on('close', (code) => {
+    rsyncProcess.on('close', (code) => {
+      rsyncProcess = null;
       if (code === 0) {
         resolve({ success: true });
+      } else if (code === 143 || code === 15) {
+        reject('Transfer cancelled');
       } else {
         reject(`Transfer failed with exit code ${code}`);
       }
     });
 
-    child.on('error', (error) => {
+    rsyncProcess.on('error', (error) => {
+      rsyncProcess = null;
       reject(`Transfer failed: ${error.message}`);
     });
   });
+});
+
+// Handle cancellation
+ipcMain.handle('cancel-transfer', async () => {
+  if (rsyncProcess) {
+    rsyncProcess.kill('SIGTERM');
+    rsyncProcess = null;
+  }
+  return true;
 });
 
 // Handle folder selection
