@@ -5,10 +5,10 @@
   "main": "main.js",
   "homepage": "./",
   "scripts": {
-    "start": "electron .",
-    "build": "electron-builder",
-    "build-mac": "electron-builder --mac",
-    "build-dmg": "electron-builder --mac dmg"
+  "start": "electron .",
+  "build": "electron-builder",
+  "build-mac": "electron-builder --mac",
+  "build-dmg": "electron-builder --mac dmg -m x64 arm64"
   },
   "devDependencies": {
     "electron": "^27.0.0",
