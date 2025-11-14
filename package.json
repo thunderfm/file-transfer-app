@@ -17,6 +17,7 @@
   "build": {
     "appId": "com.filetransfer.app",
     "productName": "SMB File Transfer",
+    "publish": null,
     "mac": {
       "target": [
         "dmg",
