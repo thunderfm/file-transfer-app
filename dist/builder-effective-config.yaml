@@ -1,0 +1,23 @@
+directories:
+  output: dist
+  buildResources: build
+appId: com.filetransfer.app
+productName: SMB File Transfer
+mac:
+  target:
+    - dmg
+    - zip
+  category: public.app-category.utilities
+dmg:
+  contents:
+    - x: 130
+      'y': 220
+      type: file
+    - x: 410
+      'y': 220
+      type: link
+      path: /Applications
+asarUnpack:
+  - iconv-corefoundation
+files: []
+electronVersion: 39.2.0

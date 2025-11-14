@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>SMB File Transfer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>File Transfer Tool</h1>
+      <p class="subtitle">Fast SMB transfers for Pro Tools projects and large file sets</p>
+
+      <div class="form-group">
+        <label for="destination">Destination SMB Path</label>
+        <input type="text" id="destination" placeholder="smb://server/share/path">
+        <p class="hint">Example: smb://synology/media/ProTools</p>
+      </div>
+
+      <div id="dropZone" class="drop-zone">
+        <div id="dropContent">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <p class="drop-text">Drag folders or files here</p>
+          <p class="drop-subtext">or</p>
+          <button id="selectBtn" class="link-btn">click to select</button>
+        </div>
+
+        <div id="transferContent" style="display: none;">
+          <div class="spinner"></div>
+          <p id="transferStatus">Transferring...</p>
+          <p id="currentFile" class="current-file"></p>
+        </div>
+
+        <div id="completeContent" style="display: none;">
+          <svg class="icon success" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <p>Transfer Complete!</p>
+        </div>
+
+        <div id="errorContent" style="display: none;">
+          <svg class="icon error" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <p id="errorMessage">Transfer Failed</p>
+        </div>
+      </div>
+
+      <div id="progressBar" class="progress-bar" style="display: none;">
+        <div id="progressFill" class="progress-fill"></div>
+        <p id="progressText">0%</p>
+      </div>
+
+      <button id="resetBtn" class="btn-primary" style="display: none;">Transfer Another</button>
+
+      <div class="info-box">
+        <p><strong>Tip:</strong> This tool uses rsync for fast, reliable transfers. Much faster than Finder for projects with many small files.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
