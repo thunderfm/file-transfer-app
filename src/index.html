@@ -3,68 +3,444 @@
 <head>
   <meta charset="UTF-8">
   <title>SMB File Transfer</title>
-  <link rel="stylesheet" href="styles.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 32px;
+    }
+
+    h1 {
+      font-size: 24px;
+      color: #0f172a;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .transfer-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .zone-section {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .zone-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .drop-zone {
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      transition: all 0.2s;
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .drop-zone:hover {
+      border-color: #3b82f6;
+      background-color: #f0f4ff;
+    }
+
+    .drop-zone.dragging {
+      border-color: #3b82f6;
+      background-color: #eff6ff;
+      border-width: 3px;
+    }
+
+    .drop-zone.filled {
+      border-color: #10b981;
+      background-color: #f0fdf4;
+    }
+
+    .icon {
+      width: 40px;
+      height: 40px;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+      stroke-width: 1.5;
+    }
+
+    .drop-zone.filled .icon {
+      color: #10b981;
+    }
+
+    .drop-text {
+      color: #0f172a;
+      font-weight: 500;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .drop-subtext {
+      color: #94a3b8;
+      font-size: 12px;
+    }
+
+    .path-display {
+      color: #10b981;
+      font-size: 12px;
+      margin-top: 8px;
+      word-break: break-all;
+      font-family: monospace;
+    }
+
+    .arrow {
+      font-size: 24px;
+      color: #cbd5e1;
+      margin: 12px 0;
+      text-align: center;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .btn-transfer {
+      flex: 1;
+      padding: 12px;
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      font-size: 14px;
+    }
+
+    .btn-transfer:hover:not(:disabled) {
+      background-color: #2563eb;
+    }
+
+    .btn-transfer:disabled {
+      background-color: #cbd5e1;
+      cursor: not-allowed;
+    }
+
+    .btn-clear {
+      padding: 12px 16px;
+      background-color: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    .btn-clear:hover {
+      background-color: #e2e8f0;
+    }
+
+    .progress-container {
+      display: none;
+      margin-bottom: 24px;
+    }
+
+    .progress-container.active {
+      display: block;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background-color: #e2e8f0;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      background-color: #3b82f6;
+      transition: width 0.3s;
+    }
+
+    .progress-text {
+      text-align: center;
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .current-file {
+      color: #64748b;
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status-message {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      display: none;
+      font-size: 14px;
+    }
+
+    .status-message.active {
+      display: block;
+    }
+
+    .status-message.success {
+      background-color: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+    }
+
+    .status-message.error {
+      background-color: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+
+    .info-box {
+      padding: 12px 16px;
+      background-color: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #1e40af;
+      line-height: 1.5;
+    }
+
+    .spinner {
+      width: 30px;
+      height: 30px;
+      border: 3px solid #e2e8f0;
+      border-top: 3px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
       <h1>File Transfer Tool</h1>
-      <p class="subtitle">Fast SMB transfers for Pro Tools projects and large file sets</p>
+      <p class="subtitle">Drag and drop folders to transfer via rsync</p>
 
-      <div class="form-group">
-        <label for="destination">Destination SMB Path</label>
-        <input type="text" id="destination" placeholder="smb://server/share/path">
-        <p class="hint">Example: smb://synology/media/ProTools</p>
-      </div>
-
-      <div id="dropZone" class="drop-zone">
-        <div id="dropContent">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="17 8 12 3 7 8"></polyline>
-            <line x1="12" y1="3" x2="12" y2="15"></line>
-          </svg>
-          <p class="drop-text">Drag folders or files here</p>
-          <p class="drop-subtext">or</p>
-          <button id="selectBtn" class="link-btn">click to select</button>
+      <div class="transfer-container">
+        <div class="zone-section">
+          <div class="zone-label">Source</div>
+          <div id="sourceZone" class="drop-zone">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p class="drop-text">Drop source folder</p>
+            <p class="drop-subtext">or click to browse</p>
+            <p class="path-display" id="sourcePath"></p>
+          </div>
         </div>
 
-        <div id="transferContent" style="display: none;">
-          <div class="spinner"></div>
-          <p id="transferStatus">Transferring...</p>
-          <p id="currentFile" class="current-file"></p>
-        </div>
-
-        <div id="completeContent" style="display: none;">
-          <svg class="icon success" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
-          <p>Transfer Complete!</p>
-        </div>
-
-        <div id="errorContent" style="display: none;">
-          <svg class="icon error" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
-          <p id="errorMessage">Transfer Failed</p>
+        <div class="zone-section">
+          <div class="zone-label">Destination</div>
+          <div id="destZone" class="drop-zone">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p class="drop-text">Drop destination folder</p>
+            <p class="drop-subtext">or click to browse</p>
+            <p class="path-display" id="destPath"></p>
+          </div>
         </div>
       </div>
 
-      <div id="progressBar" class="progress-bar" style="display: none;">
-        <div id="progressFill" class="progress-fill"></div>
-        <p id="progressText">0%</p>
+      <div class="button-group">
+        <button id="transferBtn" class="btn-transfer" disabled>Start Transfer</button>
+        <button id="clearBtn" class="btn-clear">Clear</button>
       </div>
 
-      <button id="resetBtn" class="btn-primary" style="display: none;">Transfer Another</button>
+      <div id="statusMessage" class="status-message"></div>
+
+      <div id="progressContainer" class="progress-container">
+        <div class="progress-text"><span id="progressPercent">0</span>%</div>
+        <div class="progress-bar">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+        <p class="current-file" id="currentFile"></p>
+      </div>
 
       <div class="info-box">
-        <p><strong>Tip:</strong> This tool uses rsync for fast, reliable transfers. Much faster than Finder for projects with many small files.</p>
+        <p><strong>Tip:</strong> Mount your SMB share in Finder first (Cmd+K), then drag the mounted folder as the destination. Much faster than Finder for projects with many small files.</p>
       </div>
     </div>
   </div>
 
-  <script src="renderer.js"></script>
+  <script>
+    const sourceZone = document.getElementById('sourceZone');
+    const destZone = document.getElementById('destZone');
+    const sourcePath = document.getElementById('sourcePath');
+    const destPath = document.getElementById('destPath');
+    const transferBtn = document.getElementById('transferBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressFill = document.getElementById('progressFill');
+    const progressPercent = document.getElementById('progressPercent');
+    const currentFile = document.getElementById('currentFile');
+    const statusMessage = document.getElementById('statusMessage');
+
+    let source = null;
+    let dest = null;
+
+    // Setup source zone
+    setupDropZone(sourceZone, sourcePath, (path) => {
+      source = path;
+      updateUI();
+    });
+
+    // Setup destination zone
+    setupDropZone(destZone, destPath, (path) => {
+      dest = path;
+      updateUI();
+    });
+
+    function setupDropZone(zone, pathDisplay, callback) {
+      zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        zone.classList.add('dragging');
+      });
+
+      zone.addEventListener('dragleave', () => {
+        zone.classList.remove('dragging');
+      });
+
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('dragging');
+        
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0) {
+          const path = files[0].path;
+          pathDisplay.textContent = path;
+          zone.classList.add('filled');
+          callback(path);
+        }
+      });
+
+      zone.addEventListener('click', async () => {
+        const folders = await window.api.selectFolder();
+        if (folders && folders.length > 0) {
+          const path = folders[0];
+          pathDisplay.textContent = path;
+          zone.classList.add('filled');
+          callback(path);
+        }
+      });
+    }
+
+    function updateUI() {
+      transferBtn.disabled = !source || !dest;
+    }
+
+    clearBtn.addEventListener('click', () => {
+      source = null;
+      dest = null;
+      sourcePath.textContent = '';
+      destPath.textContent = '';
+      sourceZone.classList.remove('filled');
+      destZone.classList.remove('filled');
+      statusMessage.classList.remove('active');
+      progressContainer.classList.remove('active');
+      updateUI();
+    });
+
+    transferBtn.addEventListener('click', async () => {
+      if (!source || !dest) return;
+
+      progressContainer.classList.add('active');
+      statusMessage.classList.remove('active');
+      transferBtn.disabled = true;
+      clearBtn.disabled = true;
+
+      try {
+        await window.api.startTransfer([source], dest);
+        showSuccess('Transfer complete!');
+      } catch (error) {
+        showError(error);
+      } finally {
+        transferBtn.disabled = false;
+        clearBtn.disabled = false;
+        progressContainer.classList.remove('active');
+      }
+    });
+
+    window.api.onTransferProgress((data) => {
+      if (data.progress) {
+        progressFill.style.width = `${data.progress}%`;
+        progressPercent.textContent = data.progress;
+      }
+      if (data.currentFile) {
+        currentFile.textContent = data.currentFile;
+      }
+    });
+
+    function showSuccess(message) {
+      statusMessage.textContent = message;
+      statusMessage.className = 'status-message active success';
+    }
+
+    function showError(message) {
+      statusMessage.textContent = `Error: ${message}`;
+      statusMessage.className = 'status-message active error';
+    }
+  </script>
 </body>
 </html>
