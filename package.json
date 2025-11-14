@@ -4,21 +4,15 @@
   "description": "Fast SMB file transfer tool for Pro Tools projects",
   "main": "main.js",
   "homepage": "./",
-  "author": "Your Name <your.email@example.com>",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
     "build-mac": "electron-builder --mac",
     "build-dmg": "electron-builder --mac dmg"
   },
-  "dependencies": {
-    "electron-squirrel-startup": "^1.0.0",
-    "iconv-corefoundation": "^0.3.2"
-  },
   "devDependencies": {
-    "electron": "latest",
-    "electron-builder": "latest",
-    "dmg-license": "latest"
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
   },
   "build": {
     "appId": "com.filetransfer.app",
@@ -28,7 +22,11 @@
         "dmg",
         "zip"
       ],
-      "category": "public.app-category.utilities"
+      "category": "public.app-category.utilities",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist"
     },
     "dmg": {
       "contents": [
@@ -44,9 +42,6 @@
           "path": "/Applications"
         }
       ]
-    },
-    "asarUnpack": [
-      "iconv-corefoundation"
-    ]
+    }
   }
 }
