@@ -4,7 +4,6 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 let mainWindow;
-let rsyncProcess = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -46,29 +45,38 @@ ipcMain.handle('start-transfer', async (event, { sourcePaths, destination }) => 
     const dest = `"${destination}"`;
     const command = `rsync -av --progress ${sources} ${dest}/`;
 
-    let filesProcessed = 0;
+    let totalBytes = 0;
+    let transferredBytes = 0;
     let fileCount = 0;
+    let filesProcessed = 0;
 
-    rsyncProcess = spawn('bash', ['-c', command], {
+    const child = spawn('bash', ['-c', command], {
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
-    rsyncProcess.stdout.on('data', (data) => {
+    child.stdout.on('data', (data) => {
       const lines = data.toString().split('\n');
       
       lines.forEach(line => {
+        // Look for the total file count in scanning phase: "Number of files: 1500"
+        const totalMatch = line.match(/Number of files:\s*(\d+)/);
+        if (totalMatch) {
+          fileCount = parseInt(totalMatch[1]);
+        }
+        
         // Parse rsync progress lines like: "12345 100%   1.23MB/s    0:00:05 (xfr#1, ir-chk=1000/2000)"
         const progressMatch = line.match(/(\d+)\s+(\d+)%\s+([\d.]+[KMG]B\/s)/);
         if (progressMatch) {
           const bytes = parseInt(progressMatch[1]);
           const percent = parseInt(progressMatch[2]);
-          const filename = line.split(/\s+/)[0];
           
-          // Extract file info
-          const fileMatch = line.match(/xfr#(\d+),\s*ir-chk=(\d+)\/(\d+)/);
+          // Get filename - it's the part before the size/percentage
+          const filename = line.substring(0, line.indexOf(/\d+\s+\d+%/)).trim();
+          
+          // Extract file info from xfr#
+          const fileMatch = line.match(/xfr#(\d+)/);
           if (fileMatch) {
             filesProcessed = parseInt(fileMatch[1]);
-            fileCount = parseInt(fileMatch[3]);
           }
 
           const overallPercent = fileCount > 0 
@@ -78,43 +86,31 @@ ipcMain.handle('start-transfer', async (event, { sourcePaths, destination }) => 
           event.sender.send('transfer-progress', {
             fileProgress: percent,
             overallProgress: overallPercent,
-            currentFile: filename,
+            currentFile: filename || 'Transferring...',
             stats: `File ${filesProcessed}/${fileCount}`
           });
         }
       });
     });
 
-    rsyncProcess.stderr.on('data', (data) => {
+    child.stderr.on('data', (data) => {
       const output = data.toString();
+      // rsync sends stats to stderr
       console.log('rsync:', output);
     });
 
-    rsyncProcess.on('close', (code) => {
-      rsyncProcess = null;
+    child.on('close', (code) => {
       if (code === 0) {
         resolve({ success: true });
-      } else if (code === 143 || code === 15) {
-        reject('Transfer cancelled');
       } else {
         reject(`Transfer failed with exit code ${code}`);
       }
     });
 
-    rsyncProcess.on('error', (error) => {
-      rsyncProcess = null;
+    child.on('error', (error) => {
       reject(`Transfer failed: ${error.message}`);
     });
   });
-});
-
-// Handle cancellation
-ipcMain.handle('cancel-transfer', async () => {
-  if (rsyncProcess) {
-    rsyncProcess.kill('SIGTERM');
-    rsyncProcess = null;
-  }
-  return true;
 });
 
 // Handle folder selection
